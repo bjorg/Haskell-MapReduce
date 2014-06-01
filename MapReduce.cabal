@@ -5,15 +5,15 @@ License: BSD3
 License-File: LICENSE
 Author: Julian Porter
 Maintainer: Julian Porter
-Cabal-Version: >= 1.8 
+Cabal-Version: >= 1.8
 Stability: provisional
 Synopsis: A framework for MapReduce on multicore systems
 Description:
-{- A library that defines the 'MapReduce' monad for multicore systems, and exports 
+{- A library that defines the 'MapReduce' monad for multicore systems, and exports
 the necessary functions.
 
-Mapper / reducers are generalised to functions of type 
-@a -> ([(s,a)] -> [(s',b)])@ which are combined using the monad's bind 
+Mapper / reducers are generalised to functions of type
+@a -> ([(s,a)] -> [(s',b)])@ which are combined using the monad's bind
 operation.  The resulting monad is executed on initial data by invoking
 'runMapReduce'.
 
@@ -35,22 +35,17 @@ Library
   Build-Depends:   base >=4 && <5,
                    parallel >= 3.1,
                    deepseq >= 1.1,
-                   bytestring >= 0.9, 
+                   bytestring >= 0.9,
                    binary >= 0.5,
                    pureMD5 >= 2.1,
                    QuickCheck >= 2.4.1.1,
                    Cabal >= 1.10
-  GHC-Options: 
+  GHC-Options:     -Wall
   Hs-Source-Dirs:  src
-  Exposed-Modules: Control.Monad2, 
-                   Control.Monad2.Trans.MapReduce, 
-                   Parallel.MapReduce.WordCount,
-                   Parallel.MapReduce.WordCount.Documents, 
-                   Parallel.MapReduce.WordCount.Tests, 
-                   Parallel.MapReduce.WordCount.Interface, 
-                   Parallel.MapReduce.Simple,
-                   Parallel.MapReduce
-  Other-Modules:   
+  Exposed-Modules: Parallel.MapReduce.WordCount,
+                   Parallel.MapReduce.WordCount.Documents,
+                   Parallel.MapReduce.Simple
+  Other-Modules:
   Extensions:      FlexibleInstances, MultiParamTypeClasses
 
 Executable wordcount
@@ -58,53 +53,12 @@ Executable wordcount
   Build-Depends:   base >=4 && <5,
                    parallel >= 3.1,
                    deepseq >= 1.1,
-                   bytestring >= 0.9, 
+                   bytestring >= 0.9,
                    binary >= 0.5,
                    pureMD5 >= 2.1,
                    QuickCheck >= 2.4.1.1
-  GHC-Options:     -threaded
+  GHC-Options:     -threaded -Wall
   Hs-Source-Dirs:  src
-  Other-modules:   Parallel.MapReduce,
-                   Parallel.MapReduce.WordCount, 
-                   Parallel.MapReduce.WordCount.Documents, 
-                   Parallel.MapReduce.WordCount.Tests, 
-                   Parallel.MapReduce.WordCount.Interface 
-                   
-
-Executable testwordcount
-  Main-Is:         Main.hs
-  Build-Depends:   base >=4 && <5,
-                   parallel >= 3.1,
-                   deepseq >= 1.1,
-                   bytestring >= 0.9, 
-                   binary >= 0.5,
-                   pureMD5 >= 2.1,
-                   QuickCheck >= 2.4.1.1,
-                   Cabal >= 1.10
-  GHC-Options:     -threaded
-  Hs-Source-Dirs:  src
-  Other-modules:   Parallel.MapReduce,
-                   Parallel.MapReduce.WordCount, 
-                   Parallel.MapReduce.WordCount.Documents, 
-                   Parallel.MapReduce.WordCount.Tests, 
-                   Parallel.MapReduce.WordCount.Interface
-  Extensions:      FlexibleInstances
-
-test-suite wordcounttest
-  type:            exitcode-stdio-1.0
-  main-is:         Main.hs
-  build-depends:   base >=4 && <5,
-                   parallel >= 3.1,
-                   deepseq >= 1.1,
-                   bytestring >= 0.9, 
-                   binary >= 0.5,
-                   pureMD5 >= 2.1,
-                   QuickCheck >= 2.4.1.1,
-                   Cabal >= 1.10
-  hs-source-dirs:  src
-  Extensions:      FlexibleInstances, MultiParamTypeClasses
-  other-modules:   Parallel.MapReduce,
-                   Parallel.MapReduce.WordCount, 
-                   Parallel.MapReduce.WordCount.Documents, 
-                   Parallel.MapReduce.WordCount.Tests, 
-                   Parallel.MapReduce.WordCount.Interface
+  Other-modules:   Parallel.MapReduce.Simple,
+                   Parallel.MapReduce.WordCount,
+                   Parallel.MapReduce.WordCount.Documents
