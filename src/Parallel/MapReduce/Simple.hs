@@ -1,14 +1,15 @@
-{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 -- | Module that defines the 'MapReduce' monad and exports the necessary functions.
 --
 --   Mapper / reducers are generalised to functions of type
---   @a -> ([(s,a)] -> [(s',b)])@ which are combined using the monad's bind
+--   @a -> ([(s, a)] -> [(s', b)])@ which are combined using the monad's bind
 --   operation.  The resulting monad is executed on initial data by invoking
 --   'runMapReduce'.
 --
 --   For programmers only wishing to write conventional map / reduce algorithms,
---   which use functions of type @([s] -> [(s',b)])@ a wrapper function
+--   which use functions of type @([s] -> [(s', b)])@ a wrapper function
 --   'liftMR' is provided, which converts such a function into the
 --   appropriate monadic function.
 module Parallel.MapReduce.Simple (
@@ -19,96 +20,94 @@ module Parallel.MapReduce.Simple (
 -- ** Monadic operations
         return, (>>=),
 -- ** Helper functions
-        run, distribute, lift) where
+        run, distribute, lift
+) where
 
-import Data.List (nub)
+import Prelude hiding (return,(>>=))
+
 import Control.Applicative ((<$>))
 import Control.DeepSeq (NFData)
-import Prelude hiding (return,(>>=))
-import Data.Digest.Pure.MD5 (md5)
-import Data.Binary
-import qualified Data.ByteString.Lazy as B
 import Control.Parallel.Strategies (parMap, rdeepseq)
+import Data.Binary (Binary, encode)
+import Data.Digest.Pure.MD5 (md5)
+import Data.List (nub)
 
--- | The parallel map function; it must be functionally identical to 'map',
---   distributing the computation across all available nodes in some way.
-pMap :: (NFData b) => (a -> b)  -- ^ The function to apply
-        -> [a]                  -- ^ Input
-        -> [b]                  -- ^ output
-pMap = parMap rdeepseq
+import qualified Data.ByteString.Lazy as B
 
 -- | Generalised version of 'Monad' which depends on a pair of 'Tuple's, both
 --   of which change when '>>=' is applied.
 class MonadG m where
-        return :: a                     -- ^ value.
-                -> m s x s a            -- ^ transformation that inserts the value
-                                        --   by replacing all
-                                        --   the key values with the specified
-                                        --   value, leaving the data unchanged.
+    return :: a                     -- ^ value.
+        -> m s x s a            -- ^ transformation that inserts the value
+                                --   by replacing all
+                                --   the key values with the specified
+                                --   value, leaving the data unchanged.
 
 
-        (>>=)  :: (Eq b,NFData s'',NFData c) =>
-                m s a s' b              -- ^ Initial processing chain
-                -> ( b -> m s' b s'' c )-- ^ Transformation to append to it
-                -> m s a s'' c          -- ^ Extended processing chain
+    (>>=)  :: (Eq b, NFData s'', NFData c) =>
+        m s a s' b              -- ^ Initial processing chain
+        -> ( b -> m s' b s'' c )-- ^ Transformation to append to it
+        -> m s a s'' c          -- ^ Extended processing chain
 
 
 -- | The basic type that provides the MapReduce monad (strictly a generalised monad).
 -- In the definition
--- @(s,a)@ is the type of the entries in the list of input data and @(s',b)@
+-- @(s, a)@ is the type of the entries in the list of input data and @(s', b)@
 -- that of the entries in the list of output data, where @s@ and @s'@ are data
 -- and @a@ and @b@ are keys.
 --
 -- 'MapReduce' represents the transformation applied to data by one or more
---  MapReduce staged.  Input data has type @[(s,a)]@ and output data has type
---  @[(s',b)]@ where @s@ and @s'@ are data types and @a@, @b@ are key types.
+--  MapReduce staged.  Input data has type @[(s, a)]@ and output data has type
+--  @[(s', b)]@ where @s@ and @s'@ are data types and @a@, @b@ are key types.
 --
 --  Its structure is intentionally opaque to application programmers.
-newtype MapReduce s a s' b = MR { runMR :: [(s,a)] -> [(s',b)] }
+newtype MapReduce s a s' b = MR { runMR :: [(s, a)] -> [(s', b)] }
 
 -- | Make MapReduce into a 'MonadG' instance
 instance MonadG MapReduce where
-        return = returnMR
-        (>>=)  = bindMR
+    return = returnMR
+    (>>=)  = bindMR
 
 -- | Insert a value into 'MapReduce' by replacing all the keys with the
 --   specified key, leaving the values unchanged.
-returnMR :: a                                -- ^ value
-        -> MapReduce s x s a            -- ^ transformation that inserts the value
-                                        --   into 'MapReduce' by replacing all
-                                        --   the key values with the specified
-                                        --   value, leaving the data unchanged.
-returnMR key = MR (\pairs -> [(value,key) | value <- fst <$> pairs])
+returnMR :: a                       -- ^ Key
+    -> MapReduce s x s a            -- ^ Transformation that inserts the value
+                                    --   into 'MapReduce' by replacing all
+                                    --   the keys with the specified
+                                    --   key, leaving the values unchanged.
+returnMR key = MR (\pairs -> [(value, key) | value <- fst <$> pairs])
 
 -- ^ Apply a generalised mapper / reducer to the end of a chain of processing
 --   operations to extend the chain.
-bindMR :: (Eq b,NFData s'',NFData c) =>
-                MapReduce s a s' b      -- ^ Initial state of the monad
-        -> (b -> MapReduce s' b s'' c)  -- ^ Transformation to append to it
-        -> MapReduce s a s'' c          -- ^ Extended transformation chain
-bindMR f g = MR (\s ->
-        let
-                fs = runMR f s
-                gs = map g $ nub $ snd <$> fs
-        in
-        concat $ pMap (`runMR` fs) gs)
+bindMR :: (Eq b, NFData s'', NFData c) =>
+    MapReduce s a s' b              -- ^ Initial state of the monad
+    -> (b -> MapReduce s' b s'' c)  -- ^ Transformation to append to it
+    -> MapReduce s a s'' c          -- ^ Extended transformation chain
+bindMR mr liftedMapperReducer = MR (\pairs ->
+    let
+        -- fPairs :: [(s', b)]
+        newPairs = runMR mr pairs
+        -- uniqueKeys :: [b]
+        newUniqueKeys = nub $ snd <$> newPairs
+        -- gs: [MapReduce s' b s'' c]
+        newMr = map liftedMapperReducer newUniqueKeys
+    in
+        concat $ parallelMap (`runMR` newPairs) newMr)
+    where
+        -- | The parallel map function; it must be functionally identical to 'map',
+        --   distributing the computation across all available nodes in some way.
+        parallelMap :: (NFData b) => (a -> b) -> [a] -> [b]
+        parallelMap = parMap rdeepseq
 
 -- | Execute a MapReduce MonadG given specified initial data.  Therefore, given
 --   a 'MapReduce' @m@ and initial data @xs@ we apply the processing represented
 --   by @m@ to @xs@ by executing
 --
 --   @run m xs@
-run :: MapReduce s () s' b              -- ^ 'MapReduce' representing the required processing
-                -> [s]                  -- ^ Initial data
-                -> [(s',b)]             -- ^ Result of applying the processing to the data
-run m ss = runMR m [(s,()) | s <- ss]
-
--- | The hash function.  Computes the MD5 hash of any 'Hashable' type
-hash :: (Binary s) => s         -- ^ The value to hash
-        -> Int                  -- ^ its hash
-hash s = sum $ map fromIntegral (B.unpack h)
-        where
-        h = encode (md5 $ encode s)
+run :: MapReduce s () s' b  -- ^ 'MapReduce' representing the required processing
+    -> [s]                  -- ^ Initial data
+    -> [(s', b)]            -- ^ Result of applying the processing to the data
+run mr values = runMR mr [(value, ()) | value <- values]
 
 -- | Function used at the start of processing to determine how many threads of processing
 --   to use.  Should be used as the starting point for building a 'MapReduce'.
@@ -116,21 +115,23 @@ hash s = sum $ map fromIntegral (B.unpack h)
 --
 --   @'distribute' '>>=' f1 '>>=' . . . '>>=' fn@
 distribute :: (Binary s) => Int         -- ^ Number of threads across which to distribute initial data
-                -> MapReduce s () s Int -- ^ The 'MapReduce' required to do this
-distribute n = MR (\ss -> [(s,hash s `mod` n) | s <- fst <$> ss])
+    -> MapReduce s () s Int             -- ^ The 'MapReduce' required to do this
+distribute n = MR (\pairs -> [(value, hash value `mod` n) | value <- fst <$> pairs])
+    where
+        hash :: (Binary s) => s -> Int
+        hash s = sum $ map fromIntegral $ B.unpack $ encode $ md5 $ encode s
 
--- | The wrapper function that lifts mappers / reducers into the 'MapReduce'
+-- | The wrapper function that lifts mappers/reducers into the 'MapReduce'
 --   monad.  Application programmers can use this to apply MapReduce transparently
---   to their mappers / reducers without needing to know any details of the implementation
+--   to their mappers/reducers without needing to know any details of the implementation
 --   of MapReduce.
 --
 --   Therefore the generic 'MapReduce' using only traditional mappers and
 --   reducers should look like
 --
 --   @'distribute' '>>=' 'lift' f1 '>>=' . . . '>>=' 'lift' fn@
-lift :: (Eq a) => ([s] -> [(s',b)])     -- traditional mapper / reducer of signature
+lift :: (Eq a) => ([s] -> [(s', b)])    -- traditional mapper/reducer of signature
                                         --  @([s] -> [(s',b)]@
-        -> a                            -- the input key
-        -> MapReduce s a s' b           -- the mapper / reducer wrapped as an instance
-                                        -- of 'MapReduce'
-lift f k = MR (\ss -> f $ fst <$> filter (\s -> k == snd s) ss)
+    -> a                                -- the input key
+    -> MapReduce s a s' b               -- the mapper/reducer wrapped as an instance of 'MapReduce'
+lift f key = MR (\pairs -> f $ fst <$> filter (\pair -> key == snd pair) pairs)
