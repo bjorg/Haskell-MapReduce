@@ -15,7 +15,6 @@ mapReduce :: Int                -- ^ The number of mappers to use on the first s
 mapReduce n state = run (distribute n >>= lift mapper >>= lift reducer) state
 
 -- transformers
-
 mapper :: [String] -> [(String,String)]
 mapper [] = []
 mapper (x:xs) = parse x ++ mapper xs
