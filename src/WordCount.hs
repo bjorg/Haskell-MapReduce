@@ -5,11 +5,12 @@
 --   * The name of file of word-based text
 --
 --   * (Optional) the number of mappers to use in the first stage
---     (defaults to 16)
+--     (defaults to 4)
 module Main where
 
 import Prelude hiding ((>>=))
 
+import Control.Concurrent (setNumCapabilities)
 import Parallel.MapReduce (distribute,lift,run,(>>=))
 import System.IO (openFile, hGetContents, hPutStr, hClose, IOMode(..))
 import System.Environment (getArgs)
@@ -27,8 +28,9 @@ main = do
                 0 -> error "Usage: wordcount [filename] ([num mappers])"
                 _ -> do
                         let nMap = case length args of
-                                1 -> 16
+                                1 -> 4
                                 _ -> read $ args!!1
+                        setNumCapabilities nMap
                         state <- getLines (head args)
                         let res = mapReduce nMap state
                         return res
