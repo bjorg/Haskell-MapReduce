@@ -28,11 +28,7 @@ import Prelude hiding (return,(>>=))
 import Control.Applicative ((<$>))
 import Control.DeepSeq (NFData)
 import Control.Parallel.Strategies (parMap, rdeepseq)
-import Data.Binary (Binary, encode)
-import Data.Digest.Pure.MD5 (md5)
 import Data.List (nub)
-
-import qualified Data.ByteString.Lazy as B
 
 -- | Generalised version of 'Monad' which depends on a pair of 'Tuple's, both
 --   of which change when '>>=' is applied.
@@ -114,12 +110,10 @@ run mr values = runMR mr [(value, ()) | value <- values]
 --   Therefore a generic 'MapReduce' should look like
 --
 --   @'distribute' '>>=' f1 '>>=' . . . '>>=' fn@
-distribute :: (Binary s) => Int         -- ^ Number of threads across which to distribute initial data
-    -> MapReduce s () s Int             -- ^ The 'MapReduce' required to do this
-distribute n = MR (\pairs -> [(value, hash value `mod` n) | value <- fst <$> pairs])
-    where
-        hash :: (Binary s) => s -> Int
-        hash s = sum $ map fromIntegral $ B.unpack $ encode $ md5 $ encode s
+distribute :: Int           -- ^ Number of threads across which to distribute initial data
+    -> MapReduce s () s Int -- ^ The 'MapReduce' required to do this
+distribute n = MR (\pairs -> zipWith (\value key -> (value, key `mod` n)) (fst <$> pairs) [0..])
+
 
 -- | The wrapper function that lifts mappers/reducers into the 'MapReduce'
 --   monad.  Application programmers can use this to apply MapReduce transparently
