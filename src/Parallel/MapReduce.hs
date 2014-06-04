@@ -81,14 +81,11 @@ bindMR :: (Eq b, NFData s'', NFData c) =>
     -> MapReduce s a s'' c          -- ^ Extended transformation chain
 bindMR mr liftedMapperReducer = MR (\pairs ->
     let
-        -- fPairs :: [(s', b)]
         newPairs = runMR mr pairs
-        -- uniqueKeys :: [b]
         newUniqueKeys = nub $ snd <$> newPairs
-        -- gs: [MapReduce s' b s'' c]
-        newMr = map liftedMapperReducer newUniqueKeys
+        partitionedMRs = map liftedMapperReducer newUniqueKeys
     in
-        concat $ parallelMap (`runMR` newPairs) newMr)
+        concat $ parallelMap (`runMR` newPairs) partitionedMRs)
     where
         -- | The parallel map function; it must be functionally identical to 'map',
         --   distributing the computation across all available nodes in some way.
@@ -96,10 +93,10 @@ bindMR mr liftedMapperReducer = MR (\pairs ->
         parallelMap = parMap rdeepseq
 
 -- | Execute a MapReduce MonadG given specified initial data.  Therefore, given
---   a 'MapReduce' @m@ and initial data @xs@ we apply the processing represented
---   by @m@ to @xs@ by executing
+--   a 'MapReduce' @mr@ and initial data @values@ we apply the processing represented
+--   by @mr@ to @values@ by executing
 --
---   @run m xs@
+--   @run mr values@
 run :: MapReduce s () s' b  -- ^ 'MapReduce' representing the required processing
     -> [s]                  -- ^ Initial data
     -> [(s', b)]            -- ^ Result of applying the processing to the data
