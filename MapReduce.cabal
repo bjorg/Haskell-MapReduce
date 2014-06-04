@@ -38,15 +38,15 @@ Library
                    bytestring >= 0.9,
                    binary >= 0.5,
                    pureMD5 >= 2.1,
-                   QuickCheck >= 2.4.1.1,
                    Cabal >= 1.10
   GHC-Options:     -Wall
   Hs-Source-Dirs:  src
-  Exposed-Modules: Parallel.MapReduce.WordCount,
-                   Parallel.MapReduce.WordCount.Documents,
+  Exposed-Modules:
                    Parallel.MapReduce.Simple
   Other-Modules:
-  Extensions:      FlexibleInstances, MultiParamTypeClasses
+  Extensions:
+                    FlexibleInstances,
+                    MultiParamTypeClasses
 
 Executable wordcount
   Main-Is:         WordCount.hs
@@ -55,10 +55,7 @@ Executable wordcount
                    deepseq >= 1.1,
                    bytestring >= 0.9,
                    binary >= 0.5,
-                   pureMD5 >= 2.1,
-                   QuickCheck >= 2.4.1.1
+                   pureMD5 >= 2.1
   GHC-Options:     -threaded -Wall
   Hs-Source-Dirs:  src
-  Other-modules:   Parallel.MapReduce.Simple,
-                   Parallel.MapReduce.WordCount,
-                   Parallel.MapReduce.WordCount.Documents
+  Other-modules:   Parallel.MapReduce.Simple
