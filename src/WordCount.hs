@@ -10,7 +10,7 @@ module Main where
 
 import Prelude hiding ((>>=))
 
-import Parallel.MapReduce.Simple (distribute,lift,run,(>>=))
+import Parallel.MapReduce (distribute,lift,run,(>>=))
 import System.IO (openFile, hGetContents, hPutStr, hClose, IOMode(..))
 import System.Environment (getArgs)
 

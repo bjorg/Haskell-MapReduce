@@ -41,8 +41,7 @@ Library
                    Cabal >= 1.10
   GHC-Options:     -Wall
   Hs-Source-Dirs:  src
-  Exposed-Modules:
-                   Parallel.MapReduce.Simple
+  Exposed-Modules: Parallel.MapReduce
   Other-Modules:
   Extensions:
                     FlexibleInstances,
@@ -58,4 +57,4 @@ Executable wordcount
                    pureMD5 >= 2.1
   GHC-Options:     -threaded -Wall
   Hs-Source-Dirs:  src
-  Other-modules:   Parallel.MapReduce.Simple
+  Other-modules:   Parallel.MapReduce
