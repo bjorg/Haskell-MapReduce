@@ -3,12 +3,12 @@
 
 -- | Module that defines the 'MapReduce' monad and exports the necessary functions.
 --
---   Mapper / reducers are generalised to functions of type
+--   Mapper/reducers are generalised to functions of type
 --   @a -> ([(s, a)] -> [(s', b)])@ which are combined using the monad's bind
 --   operation.  The resulting monad is executed on initial data by invoking
 --   'runMapReduce'.
 --
---   For programmers only wishing to write conventional map / reduce algorithms,
+--   For programmers only wishing to write conventional map/reduce algorithms,
 --   which use functions of type @([s] -> [(s', b)])@ a wrapper function
 --   'liftMR' is provided, which converts such a function into the
 --   appropriate monadic function.
@@ -73,7 +73,7 @@ returnMR :: a                       -- ^ Key
                                     --   key, leaving the values unchanged.
 returnMR key = MR (\pairs -> [(value, key) | value <- fst <$> pairs])
 
--- ^ Apply a generalised mapper / reducer to the end of a chain of processing
+-- ^ Apply a generalised mapper/reducer to the end of a chain of processing
 --   operations to extend the chain.
 bindMR :: (Eq b, NFData s'', NFData c) =>
     MapReduce s a s' b              -- ^ Initial state of the monad

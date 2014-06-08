@@ -23,18 +23,18 @@ showNice (x:xs) = do
 
 main::IO()
 main = do
-        args <- getArgs
-        out <- case length args of
-                0 -> error "Usage: wordcount [filename] ([num mappers])"
-                _ -> do
-                        let nMap = case length args of
-                                1 -> 4
-                                _ -> read $ args!!1
-                        setNumCapabilities nMap
-                        state <- getLines (head args)
-                        let res = mapReduce nMap state
-                        return res
-        showNice out
+    args <- getArgs
+    out <- case length args of
+            0 -> error "Usage: wordcount [filename] ([num mappers])"
+            _ -> do
+                    let nMap = case length args of
+                            1 -> 4
+                            _ -> read $ args!!1
+                    setNumCapabilities nMap
+                    state <- getLines (head args)
+                    let res = mapReduce nMap state
+                    return res
+    showNice out
     where
         mapReduce :: Int        -- ^ The number of mappers to use on the first stage
             -> [String]         -- ^ The list of words to count
